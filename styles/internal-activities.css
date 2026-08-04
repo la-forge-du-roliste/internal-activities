@@ -1,0 +1,21 @@
+.internal-activities-toggle.active {
+  color: var(--color-warm-2, #c98b3c);
+  text-shadow: 0 0 5px color-mix(in srgb, currentColor 60%, transparent);
+}
+
+li.activity.internal-activities-internal > .item-row .activity-name .title::after,
+.activity-row.internal-activities-internal .activity-name .title::after {
+  content: "\f070";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  margin-inline-start: 0.45rem;
+  font-size: 0.75em;
+  opacity: 0.65;
+}
+
+.internal-activities-empty {
+  padding: 0.75rem;
+  text-align: center;
+  opacity: 0.75;
+  font-style: italic;
+}

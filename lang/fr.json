@@ -1,0 +1,9 @@
+{
+  "INTERNAL-ACTIVITIES.Name": "Activités internes",
+  "INTERNAL-ACTIVITIES.Mark": "Masquer dans la boîte de choix",
+  "INTERNAL-ACTIVITIES.Unmark": "Afficher dans la boîte de choix",
+  "INTERNAL-ACTIVITIES.Internal": "Activité interne",
+  "INTERNAL-ACTIVITIES.NoVisibleActivity": "Aucune activité visible n’est disponible.",
+  "INTERNAL-ACTIVITIES.Ready": "Internal Activities est chargé.",
+  "INTERNAL-ACTIVITIES.NoPermission": "Vous n’avez pas la permission de modifier cet objet."
+}

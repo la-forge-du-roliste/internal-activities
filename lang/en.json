@@ -1,0 +1,9 @@
+{
+  "INTERNAL-ACTIVITIES.Name": "Internal Activities",
+  "INTERNAL-ACTIVITIES.Mark": "Hide from the activity chooser",
+  "INTERNAL-ACTIVITIES.Unmark": "Show in the activity chooser",
+  "INTERNAL-ACTIVITIES.Internal": "Internal activity",
+  "INTERNAL-ACTIVITIES.NoVisibleActivity": "No visible activity is available.",
+  "INTERNAL-ACTIVITIES.Ready": "Internal Activities is loaded.",
+  "INTERNAL-ACTIVITIES.NoPermission": "You do not have permission to modify this item."
+}
