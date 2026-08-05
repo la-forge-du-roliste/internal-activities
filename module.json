@@ -1,8 +1,13 @@
 {
   "id": "internal-activities",
   "title": "Internal Activities",
-  "description": "Permet de masquer certaines activités D&D5e dans la boîte de choix tout en les laissant exécutables par SC - More Activities, Midi-QOL et les macros.",
+  "description": "Hide selected D&D5e activities from the activity choice dialog while keeping them fully usable by items, macros, and automations.",
   "version": "1.1.0",
+  "url": "https://github.com/theorikkdk/internal-activities",
+  "manifest": "https://github.com/theorikkdk/internal-activities/releases/latest/download/module.json",
+  "download": "https://github.com/theorikkdk/internal-activities/releases/download/v1.1.0/internal-activities-v1.1.0.zip",
+  "bugs": "https://github.com/theorikkdk/internal-activities/issues",
+  "changelog": "https://github.com/theorikkdk/internal-activities/blob/main/CHANGELOG.md",
   "compatibility": {
     "minimum": "14",
     "verified": "14",
@@ -43,5 +48,6 @@
       }
     ]
   },
-  "readme": "README.md"
+  "readme": "README.md",
+  "license": "LICENSE"
 }
