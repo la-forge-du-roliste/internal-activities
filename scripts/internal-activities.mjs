@@ -1,5 +1,6 @@
 const MODULE_ID = "internal-activities";
 const FLAG_KEY = "activityIds";
+const itemWriteQueues = new Map();
 
 function getRootElement(html) {
   if (html instanceof HTMLElement) return html;
@@ -12,35 +13,109 @@ function getItemFromApplication(app) {
   return candidates.find(candidate => candidate?.documentName === "Item") ?? null;
 }
 
+function normalizeInternalActivityIds(item, value) {
+  if (!Array.isArray(value)) return [];
+
+  const activities = item?.system?.activities;
+  if (!activities?.get) return [];
+
+  const seen = new Set();
+  return value.filter(id => {
+    if (typeof id !== "string" || !id.length || seen.has(id) || !activities.get(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
 function getInternalActivityIds(item) {
-  const value = item?.getFlag?.(MODULE_ID, FLAG_KEY);
-  return Array.isArray(value) ? value.filter(id => typeof id === "string") : [];
+  return normalizeInternalActivityIds(item, item?.getFlag?.(MODULE_ID, FLAG_KEY));
 }
 
 function isInternal(item, activityId) {
   return getInternalActivityIds(item).includes(activityId);
 }
 
-async function setInternal(item, activityId, internal = true) {
-  if (!item?.isOwner) {
-    ui.notifications.warn(game.i18n.localize("INTERNAL-ACTIVITIES.NoPermission"));
+function notifyValidationFailure(messageKey, details) {
+  console.warn(`${MODULE_ID} | ${details}`);
+  ui.notifications.warn(game.i18n.localize(messageKey));
+}
+
+function validateWriteRequest(item, activityId) {
+  if (item?.documentName !== "Item") {
+    notifyValidationFailure("INTERNAL-ACTIVITIES.InvalidItem", "Écriture refusée : le document fourni n’est pas un Item.");
     return false;
   }
-
-  const ids = new Set(getInternalActivityIds(item));
-  if (internal) ids.add(activityId);
-  else ids.delete(activityId);
-
-  const next = [...ids];
-  if (next.length) await item.setFlag(MODULE_ID, FLAG_KEY, next);
-  else await item.unsetFlag(MODULE_ID, FLAG_KEY);
+  if (!game.user?.isGM) {
+    notifyValidationFailure("INTERNAL-ACTIVITIES.NoPermission", "Écriture refusée : cette action est réservée au MJ.");
+    return false;
+  }
+  if (typeof activityId !== "string" || !activityId.length || !item.system?.activities?.get?.(activityId)) {
+    notifyValidationFailure(
+      "INTERNAL-ACTIVITIES.InvalidActivity",
+      `Écriture refusée : l’activité « ${String(activityId)} » est invalide ou absente de l’Item ${item.uuid}.`
+    );
+    return false;
+  }
   return true;
 }
 
+function enqueueItemWrite(item, operation) {
+  const key = item.uuid ?? item.id;
+  const previous = itemWriteQueues.get(key) ?? Promise.resolve();
+  const current = previous.catch(() => undefined).then(operation);
+  itemWriteQueues.set(key, current);
+
+  return current.finally(() => {
+    if (itemWriteQueues.get(key) === current) itemWriteQueues.delete(key);
+  });
+}
+
+function hasStoredFlag(item) {
+  return foundry.utils.hasProperty(item.flags, `${MODULE_ID}.${FLAG_KEY}`);
+}
+
+async function persistInternalActivityIds(item, ids) {
+  if (ids.length) await item.setFlag(MODULE_ID, FLAG_KEY, ids);
+  else if (hasStoredFlag(item)) await item.unsetFlag(MODULE_ID, FLAG_KEY);
+}
+
+async function runManualWrite(item, operation) {
+  try {
+    return await enqueueItemWrite(item, operation);
+  } catch (error) {
+    console.error(`${MODULE_ID} | Échec de l’enregistrement des activités internes pour ${item.uuid}.`, error);
+    ui.notifications.error(game.i18n.localize("INTERNAL-ACTIVITIES.SaveFailed"));
+    return null;
+  }
+}
+
+async function setInternal(item, activityId, internal = true) {
+  if (!validateWriteRequest(item, activityId)) return false;
+
+  const result = await runManualWrite(item, async () => {
+    const ids = new Set(getInternalActivityIds(item));
+    if (internal) ids.add(activityId);
+    else ids.delete(activityId);
+
+    await persistInternalActivityIds(item, [...ids]);
+    return true;
+  });
+
+  return result ?? false;
+}
+
 async function toggleInternal(item, activityId) {
-  const nextState = !isInternal(item, activityId);
-  const updated = await setInternal(item, activityId, nextState);
-  return updated ? nextState : isInternal(item, activityId);
+  if (!validateWriteRequest(item, activityId)) return null;
+
+  return runManualWrite(item, async () => {
+    const ids = new Set(getInternalActivityIds(item));
+    const nextState = !ids.has(activityId);
+    if (nextState) ids.add(activityId);
+    else ids.delete(activityId);
+
+    await persistInternalActivityIds(item, [...ids]);
+    return nextState;
+  });
 }
 
 /**
@@ -76,7 +151,7 @@ function filterActivityChoiceDialog(app, html) {
 function enhanceItemSheet(app, html) {
   const root = getRootElement(html);
   const item = getItemFromApplication(app);
-  if (!root || !item || game.system.id !== "dnd5e" || !item.isOwner) return;
+  if (!root || !item || game.system.id !== "dnd5e" || !game.user?.isGM) return;
 
   const internalIds = new Set(getInternalActivityIds(item));
 
@@ -105,8 +180,15 @@ function enhanceItemSheet(app, html) {
     button.addEventListener("click", async event => {
       event.preventDefault();
       event.stopPropagation();
-      await toggleInternal(item, activityId);
-      app.render({ force: true });
+      if (button.disabled) return;
+
+      button.disabled = true;
+      try {
+        const result = await toggleInternal(item, activityId);
+        if (result !== null) app.render({ force: true });
+      } finally {
+        button.disabled = false;
+      }
     });
 
     const contextButton = controls.querySelector("[data-context-menu]");
@@ -116,18 +198,19 @@ function enhanceItemSheet(app, html) {
 }
 
 async function cleanupStaleIds(item) {
-  if (!item?.isOwner || game.system.id !== "dnd5e") return;
+  if (item?.documentName !== "Item" || !game.user?.isGM || game.system.id !== "dnd5e" || !hasStoredFlag(item)) return;
 
-  const stored = getInternalActivityIds(item);
-  if (!stored.length) return;
+  await enqueueItemWrite(item, async () => {
+    const raw = item.getFlag(MODULE_ID, FLAG_KEY);
+    const cleaned = normalizeInternalActivityIds(item, raw);
+    const alreadyClean = cleaned.length > 0
+      && Array.isArray(raw)
+      && raw.length === cleaned.length
+      && raw.every((id, index) => id === cleaned[index]);
+    if (alreadyClean) return;
 
-  const activities = item.system?.activities;
-  const validIds = new Set(activities ? Array.from(activities, activity => activity.id) : []);
-  const cleaned = stored.filter(id => validIds.has(id));
-  if (cleaned.length === stored.length) return;
-
-  if (cleaned.length) await item.setFlag(MODULE_ID, FLAG_KEY, cleaned);
-  else await item.unsetFlag(MODULE_ID, FLAG_KEY);
+    await persistInternalActivityIds(item, cleaned);
+  });
 }
 
 Hooks.once("init", () => {
@@ -142,7 +225,7 @@ Hooks.once("init", () => {
   }
 });
 
-// Hook spécifique de la boîte de choix D&D5e 5.2+.
+// Hook spécifique de la boîte de choix D&D5e 5.3.
 Hooks.on("renderActivityChoiceDialog", filterActivityChoiceDialog);
 
 // ApplicationV2 est utilisé par D&D5e 5.3 sous Foundry V14.

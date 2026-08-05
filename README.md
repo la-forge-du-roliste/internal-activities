@@ -1,6 +1,6 @@
 # Internal Activities — Foundry VTT V14
 
-Petit module pour Foundry VTT V14 et D&D5e 5.2–5.3.
+Petit module pour Foundry VTT V14 et D&D5e 5.3.
 
 Il permet de marquer une activité comme interne :
 

@@ -5,5 +5,8 @@
   "INTERNAL-ACTIVITIES.Internal": "Activité interne",
   "INTERNAL-ACTIVITIES.NoVisibleActivity": "Aucune activité visible n’est disponible.",
   "INTERNAL-ACTIVITIES.Ready": "Internal Activities est chargé.",
-  "INTERNAL-ACTIVITIES.NoPermission": "Vous n’avez pas la permission de modifier cet objet."
+  "INTERNAL-ACTIVITIES.NoPermission": "Seul un MJ peut modifier les activités internes.",
+  "INTERNAL-ACTIVITIES.InvalidItem": "Le document fourni n’est pas un objet valide.",
+  "INTERNAL-ACTIVITIES.InvalidActivity": "L’activité fournie est invalide ou n’existe pas sur cet objet.",
+  "INTERNAL-ACTIVITIES.SaveFailed": "L’état interne de l’activité n’a pas pu être enregistré."
 }

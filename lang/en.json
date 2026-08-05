@@ -5,5 +5,8 @@
   "INTERNAL-ACTIVITIES.Internal": "Internal activity",
   "INTERNAL-ACTIVITIES.NoVisibleActivity": "No visible activity is available.",
   "INTERNAL-ACTIVITIES.Ready": "Internal Activities is loaded.",
-  "INTERNAL-ACTIVITIES.NoPermission": "You do not have permission to modify this item."
+  "INTERNAL-ACTIVITIES.NoPermission": "Only a GM can modify internal activities.",
+  "INTERNAL-ACTIVITIES.InvalidItem": "The supplied document is not a valid item.",
+  "INTERNAL-ACTIVITIES.InvalidActivity": "The supplied activity is invalid or does not exist on this item.",
+  "INTERNAL-ACTIVITIES.SaveFailed": "The internal activity state could not be saved."
 }
