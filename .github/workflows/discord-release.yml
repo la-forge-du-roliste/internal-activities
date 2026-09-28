@@ -4,9 +4,10 @@ on:
   release:
     types: [published]
 
+  workflow_dispatch:
+
 jobs:
   announce:
-    if: ${{ github.event.release.prerelease == false }}
     runs-on: ubuntu-latest
 
     steps:
@@ -17,18 +18,43 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
           RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
           PUBLISHED_AT: ${{ github.event.release.published_at }}
 
         run: |
-          NOTES="${RELEASE_BODY:-Aucune note de version fournie.}"
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "Le secret DISCORD_RELEASES_WEBHOOK est absent."
+            exit 1
+          fi
+
+          # MODE TEST MANUEL
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="TEST"
+            URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+            NOTES="✅ Test réussi : l'automatisation GitHub → Discord fonctionne correctement."
+            TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          # MODE VRAIE RELEASE
+          else
+            if [ "$RELEASE_PRERELEASE" = "true" ]; then
+              echo "Pré-release ignorée."
+              exit 0
+            fi
+
+            VERSION="$RELEASE_TAG"
+            URL="$RELEASE_URL"
+            NOTES="${RELEASE_BODY:-Aucune note de version fournie.}"
+            TIMESTAMP="$PUBLISHED_AT"
+          fi
+
           NOTES="$(printf '%s' "$NOTES" | head -c 3000)"
 
           jq -n \
             --arg module "$MODULE_NAME" \
-            --arg version "$RELEASE_TAG" \
+            --arg version "$VERSION" \
             --arg notes "$NOTES" \
-            --arg url "$RELEASE_URL" \
-            --arg timestamp "$PUBLISHED_AT" \
+            --arg url "$URL" \
+            --arg timestamp "$TIMESTAMP" \
             '{
               username: "La Forge du Rôliste",
               avatar_url: "https://github.com/la-forge-du-roliste.png",
@@ -43,7 +69,7 @@ jobs:
                     "Une nouvelle version vient d’être forgée et est maintenant disponible.\n\n" +
                     "**✨ Notes de version**\n" +
                     $notes +
-                    "\n\n📦 [Voir la release sur GitHub](" + $url + ")",
+                    "\n\n📦 [Voir sur GitHub](" + $url + ")",
                   color: 16096779,
                   footer: {
                     text: "La Forge du Rôliste • Foundry VTT"
