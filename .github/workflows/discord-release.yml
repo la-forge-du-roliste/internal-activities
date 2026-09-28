@@ -27,14 +27,11 @@ jobs:
             exit 1
           fi
 
-          # MODE TEST MANUEL
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             VERSION="TEST"
             URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
             NOTES="✅ Test réussi : l'automatisation GitHub → Discord fonctionne correctement."
             TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-          # MODE VRAIE RELEASE
           else
             if [ "$RELEASE_PRERELEASE" = "true" ]; then
               echo "Pré-release ignorée."
@@ -64,12 +61,12 @@ jobs:
               embeds: [
                 {
                   title: "🔥 Nouvelle sortie de la Forge !",
-                  description:
-                    "🧩 **" + $module + " — " + $version + "**\n\n" +
+                  description: (
+                    "🧩 **\($module) — \($version)**\n\n" +
                     "Une nouvelle version vient d’être forgée et est maintenant disponible.\n\n" +
-                    "**✨ Notes de version**\n" +
-                    $notes +
-                    "\n\n📦 [Voir sur GitHub](" + $url + ")",
+                    "**✨ Notes de version**\n\($notes)\n\n" +
+                    "📦 [Voir sur GitHub](\($url))"
+                  ),
                   color: 16096779,
                   footer: {
                     text: "La Forge du Rôliste • Foundry VTT"
