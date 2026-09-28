@@ -1,0 +1,59 @@
+name: Discord - annonce de release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  announce:
+    if: ${{ github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Envoyer l'annonce Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          MODULE_NAME: "Internal Activities"
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          PUBLISHED_AT: ${{ github.event.release.published_at }}
+
+        run: |
+          NOTES="${RELEASE_BODY:-Aucune note de version fournie.}"
+          NOTES="$(printf '%s' "$NOTES" | head -c 3000)"
+
+          jq -n \
+            --arg module "$MODULE_NAME" \
+            --arg version "$RELEASE_TAG" \
+            --arg notes "$NOTES" \
+            --arg url "$RELEASE_URL" \
+            --arg timestamp "$PUBLISHED_AT" \
+            '{
+              username: "La Forge du Rôliste",
+              avatar_url: "https://github.com/la-forge-du-roliste.png",
+              allowed_mentions: {
+                parse: []
+              },
+              embeds: [
+                {
+                  title: "🔥 Nouvelle sortie de la Forge !",
+                  description:
+                    "🧩 **" + $module + " — " + $version + "**\n\n" +
+                    "Une nouvelle version vient d’être forgée et est maintenant disponible.\n\n" +
+                    "**✨ Notes de version**\n" +
+                    $notes +
+                    "\n\n📦 [Voir la release sur GitHub](" + $url + ")",
+                  color: 16096779,
+                  footer: {
+                    text: "La Forge du Rôliste • Foundry VTT"
+                  },
+                  timestamp: $timestamp
+                }
+              ]
+            }' > payload.json
+
+          curl --fail-with-body \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "$DISCORD_WEBHOOK"
